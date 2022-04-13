@@ -1,4 +1,3 @@
-from operator import index
 import os
 import shutil
 import errno
@@ -387,44 +386,16 @@ def update(directory, commands):
 
 	# if the table exists, then check values to update
 	if (len(attributeNames) > 0):
-		setColData = tableData[commands[3]]
-		conditionColData = tableData[commands[7]]
+		conditionColData = tableData.loc[:,(commands[7])]
 
 		# iterates over the conditional column and updates desired column
 		for i, value in enumerate(conditionColData):
-			condition = evalComparison(value, commands[8], commands[5])
+			condition = evalComparison(value, commands[8], commands[9])
 
-			# if condition:
-			# 	setColData[i] = commands[5]
-			# 	numUpdated += 1
-			if commands[8] == '=':
-				if value == commands[9]:
-					setColData[i] = commands[5]
-					numUpdated += 1
-			elif commands[8] == '>':
-				if value > commands[9]:
-					setColData[i] = commands[5]
-					numUpdated += 1
-			elif commands[8] == '>=':
-				if value >= commands[9]:
-					setColData[i] = commands[5]
-					numUpdated += 1
-			elif commands[8] == '<=':
-				if value <= commands[9]:
-					setColData[i] = commands[5]
-					numUpdated += 1
-			elif commands[8] == '<':
-				if value < commands[9]:
-					setColData[i] = commands[5]
-					numUpdated += 1
-			elif commands[8] == '!=':
-				if value != commands[9]:
-					setColData[i] = commands[5]
-					numUpdated += 1
+			if condition:
+				tableData.at[i, commands[3]] = commands[5]
+				numUpdated += 1
 
-		# updates original table
-		tableData[commands[3]] = setColData
-		
 		# writes updated data to disc
 		writeTable(directory, commands[1], tableData, attributeTypes)
 
@@ -616,7 +587,7 @@ def main():
 	:return: null
 	"""
 
-	currDirect = rootDirect = os.getcwd()
+	currDirect = os.getcwd()
 	loop = True
 	while (loop):
 
@@ -624,7 +595,7 @@ def main():
 		select = ""
 		stopword = ";"
 		while True:
-			line = input()
+			line = input("-->")
 			if ';' in line or '.exit' in line:
 				select += "%s\n" % line
 				break
