@@ -1,0 +1,25 @@
+{
+    "schema":{
+        "fields":[
+            {
+                "name":"index",
+                "type":"string"
+            },
+            {
+                "name":"a1",
+                "type":"integer"
+            },
+            {
+                "name":"a2",
+                "type":"string"
+            }
+        ],
+        "primaryKey":[
+            "index"
+        ],
+        "pandas_version":"1.4.0"
+    },
+    "data":[
+
+    ]
+}

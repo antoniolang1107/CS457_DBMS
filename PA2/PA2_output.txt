@@ -1,0 +1,32 @@
+Database CS457_PA2 created.
+Using database CS457_PA2.
+Table product created.
+1 new record inserted.
+1 new record inserted.
+1 new record inserted.
+1 new record inserted.
+1 new record inserted.
+pid int | name varchar(20) | price float
+1 	| Gizmo 	| 19.99
+2 	| PowerGizmo 	| 29.99
+3 	| SingleTouch 	| 149.99
+4 	| MultiTouch 	| 199.99
+5 	| SuperGizmo 	| 49.99
+1 record modified.
+2 records modified.
+pid int | name varchar(20) | price float
+1 	| Gizmo 	| 14.99
+2 	| PowerGizmo 	| 29.99
+3 	| SingleTouch 	| 149.99
+4 	| MultiTouch 	| 199.99
+5 	| Gizmo 	| 14.99
+2 records deleted.
+1 record deleted.
+select * from Product;
+pid int | name varchar(20) | price float
+2 	| PowerGizmo 	| 29.99
+3 	| SingleTouch 	| 149.99
+name varchar(20) | price float
+PowerGizmo 	| 29.99
+SingleTouch 	| 149.99
+All done.
