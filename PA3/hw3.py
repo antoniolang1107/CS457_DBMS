@@ -1,4 +1,5 @@
 import os
+from posixpath import split
 import shutil
 import errno
 import re
@@ -363,7 +364,7 @@ def writeTable(directory, tableName, table, attributeTypes):
 	table.to_json(tablePath, orient = 'table', indent = 4)
 
 
-def update(directory, commands):
+def update(directory, tableName, updateCol, updateVal, compareOperator, conditionCol, conditionVal):
 	'''
 	update chnages values in a column based on a given condition
 
@@ -372,32 +373,29 @@ def update(directory, commands):
 	:return: no value returned
 	'''
 
-	tableData, attributeNames, attributeTypes = readTable(directory, commands[1])
+	tableData, attributeNames, attributeTypes = readTable(directory, tableName)
 	numUpdated = 0
 
-	# iterates over the user-passed command and removes ' from any strings
-	for i, value in enumerate(commands):
-		if '\'' in value:
-			commands[i] = commands[i].replace('\'','')
+	
 
 	# changes a numeric string argument into int
-	if (commands[5].isnumeric()):
-		commands[5] = int(commands[5])
+	if (updateVal.isnumeric()):
+		updateVal = int(updateVal)
 
 	# if the table exists, then check values to update
 	if (len(attributeNames) > 0):
-		conditionColData = tableData.loc[:,(commands[7])]
+		conditionColData = tableData.loc[:,(conditionCol)]
 
 		# iterates over the conditional column and updates desired column
 		for i, value in enumerate(conditionColData):
-			condition = evalComparison(value, commands[8], commands[9])
+			condition = evalComparison(value, compareOperator, conditionVal)
 
 			if condition:
-				tableData.at[i, commands[3]] = commands[5]
+				tableData.at[i, updateCol] = updateVal
 				numUpdated += 1
 
 		# writes updated data to disc
-		writeTable(directory, commands[1], tableData, attributeTypes)
+		writeTable(directory, tableName, tableData, attributeTypes)
 
 		if (numUpdated == 1):
 			print ("%d record modified." % numUpdated)
@@ -406,7 +404,7 @@ def update(directory, commands):
 
 	# table does not exist -> display error
 	else:
-		print ("!Error table %s doesn't exist." % commands[1])
+		print ("!Error table %s doesn't exist." % tableName)
 
 
 def delete(directory, commands):
@@ -541,8 +539,11 @@ def parser(inputCommand, direct):
 		
 		# UPDATE entries based on given condition
 		elif (splitCommands[0] == 'UPDATE'):
-			update(direct, splitCommands)
-
+			# iterates over the user-passed command and removes ' from any strings
+			for i, value in enumerate(splitCommands):
+				if '\'' in value:
+					splitCommands[i] = splitCommands[i].replace('\'','')
+			update(direct, splitCommands[1], splitCommands[3], splitCommands[5], splitCommands[8], splitCommands[7], splitCommands[9])
 		# DELETE entries based on given condition
 		elif (splitCommands[0] == 'DELETE' and splitCommands[1].upper() == 'FROM'):
 				delete(direct, splitCommands)
