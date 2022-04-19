@@ -126,11 +126,11 @@ def query(directory, cols, tableNames, condition):
 	:param tableName: name of the desired table to read
 	:return: no value returned
 	"""
-	print (cols)
-	print (tableNames)
-	print (condition)
+	# print (cols)
+	# print (tableNames)
+	# print (condition)
 
-	# tableNames = tableNames.lower()
+
 	tableData = pd.DataFrame()
 	attributeNames = []
 	attributeTypes = []
@@ -209,6 +209,9 @@ def query(directory, cols, tableNames, condition):
 			print ("!Failed to query table %s because it does not exist." % tableName)
 	elif (len(tableNames) == 4):
 
+		header = []
+		outputData = []
+
 		# reads in the two tables
 		tblData1, attrNames1, attrTypes1 = readTable(directory, tableNames[0])
 		tblData2, attrNames2, attrTypes2 = readTable(directory, tableNames[2])
@@ -234,24 +237,50 @@ def query(directory, cols, tableNames, condition):
 		tempDF = joinTable.copy()
 
 		if (condition1[0] == tblAbb1 and condition2[0] == tblAbb2):
-			print ("looking at %s and %s" % (tableNames[0], tableNames[2]))
 
 			i = 0
 			j = 0
-			for row1 in tblData1.itertuples():
+			for row1 in tblCond1.iteritems():
 				j = 0
-				for row2 in tblData2.itertuples():
+				for row2 in tblCond2.iteritems():
 					if (row1[1] == row2[1]):
+						# takes the data from the left and right tables and combines them
 						tempDF.loc[0, tblData1.columns] = tblData1.iloc[i]
-						tempDF.loc[0, tblData2.columns] = tblData2.iloc[i]
+						tempDF.loc[0, tblData2.columns] = tblData2.iloc[j]
 						tempDF = tempDF.astype(joinTable.dtypes)
 
+						# adds the combined row into the joined table
 						joinTable = pd.concat([joinTable, tempDF], ignore_index = True)
 						
 					j += 1
 				i += 1
-			print (joinTable)
+
+			dataLine = [[] for i in range(len(joinTable))]
+
+			for i in range(0, len(attrNames1)):
+				header.append(attrNames1[i] + ' ' + attrTypes1[i])
+			for i in range(0, len(attrNames2)):
+				header.append(attrNames1[i] + ' ' + attrTypes2[i])
+			
+			for i, row in enumerate(joinTable.itertuples()):
+				for j in range(1, len(row)):
+					dataLine[i].append(str(row[j]))
+
+			# formats each output row
+			for value in dataLine:
+				mergedData = ' \t| '.join(value)
+				outputData.append(mergedData)
+
+			# formats the header for output
+			mergedOutput = ' | '.join(header)
+
+			# prints output
+			print (mergedOutput)
+			for x in outputData:
+				print(x)
+
 		else:
+			
 			print ("Table not found")
 	else:
 		printError()
@@ -359,6 +388,12 @@ def insert(directory, commands):
 
 
 def inputToObject(data):
+	"""
+	inputToObject checks if a float or int exists in a string and changes it if it does
+
+	:param data: given string to check
+	:return: float or int class
+	"""
 	checkFloat = re.findall("\d+\.\d+", data)
 	if (len(checkFloat) > 0):
 		return float(checkFloat[0])
@@ -522,13 +557,13 @@ def delete(directory, commands):
 		print("!Error table %s does not exist" % commands[2])
 
 
-def innerJoin(database, leftTableName, leftAttribute, rightTableName, rightAttribute):
-	leftTable = (database, leftTableName)
+# def innerJoin(database, leftTableName, leftAttribute, rightTableName, rightAttribute):
+# 	leftTable = (database, leftTableName)
 
-	rightTable = (database, rightTableName)
+# 	rightTable = (database, rightTableName)
 	
 	
-	print()
+# 	print()
 
 
 def parser(inputCommand, direct):
