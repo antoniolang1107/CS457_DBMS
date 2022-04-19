@@ -1,5 +1,4 @@
 import os
-from posixpath import split
 import shutil
 import errno
 import re
@@ -127,6 +126,9 @@ def query(directory, cols, tableName, condition):
 	:param tableName: name of the desired table to read
 	:return: no value returned
 	"""
+	print (cols)
+	print (tableName)
+	print (condition)
 
 	tableName = tableName.lower()
 	tableData = pd.DataFrame()
@@ -281,8 +283,7 @@ def insert(directory, commands):
 	# removes specific characters and separates tokens into splitData list
 	commands[4] = commands[4].replace('\'', '')
 	commands[4] = commands[4].replace('\"', '')
-	commands[4] = commands[4].replace(',', '')
-	splitData = list(filter(None, re.split(', |\s|;+|\((.+)\)', commands[4])))
+	splitData = list(filter(None, re.split(',|\s|;+|\((.+)\)', commands[4])))
 
 	# changes entered data from strings into proper data type
 	for i, data in enumerate(splitData):
@@ -376,8 +377,6 @@ def update(directory, tableName, updateCol, updateVal, compareOperator, conditio
 	tableData, attributeNames, attributeTypes = readTable(directory, tableName)
 	numUpdated = 0
 
-	
-
 	# changes a numeric string argument into int
 	if (updateVal.isnumeric()):
 		updateVal = int(updateVal)
@@ -469,6 +468,15 @@ def delete(directory, commands):
 	# table does not exists -> display error
 	else:
 		print("!Error table %s does not exist" % commands[2])
+
+
+def innerJoin(database, leftTableName, leftAttribute, rightTableName, rightAttribute):
+	leftTable = (database, leftTableName)
+
+	rightTable = (database, rightTableName)
+	
+	
+	print()
 
 
 def parser(inputCommand, direct):
@@ -594,7 +602,6 @@ def main():
 
 		# continues reading lines until ';' is reached
 		select = ""
-		stopword = ";"
 		while True:
 			line = input("-->")
 			if ';' in line or '.exit' in line:
