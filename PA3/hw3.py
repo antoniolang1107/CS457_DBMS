@@ -117,7 +117,7 @@ def use(directory, name):
 	else:
 		print ("!Failed to use database beacuse it does not exist")
 
-def query(directory, cols, tableName, condition):
+def query(directory, cols, tableNames, condition):
 	"""
 	query reads the desired table and returns the desired column
 
@@ -127,83 +127,125 @@ def query(directory, cols, tableName, condition):
 	:return: no value returned
 	"""
 	print (cols)
-	print (tableName)
+	print (tableNames)
 	print (condition)
 
-	tableName = tableName.lower()
+	# tableNames = tableNames.lower()
 	tableData = pd.DataFrame()
 	attributeNames = []
 	attributeTypes = []
 	outputData = []
-	tableData, attributeNames, attributeTypes = readTable(directory, tableName)
-	dataLine = [[] for i in range(len(tableData))]
-	header = []
-	conditionGiven = (len(condition) > 0)
 
-	# finds the index of the column used for comparison
-	if conditionGiven:
-		conditionColumnIndex = tableData.columns.get_loc(condition[0]) + 1
+	if (len(tableNames) == 1):
+		tableName = tableNames[0].lower()
+		tableData, attributeNames, attributeTypes = readTable(directory, tableName)
+		dataLine = [[] for i in range(len(tableData))]
+		header = []
+		conditionGiven = (len(condition) > 0)
 
-		# removes any ' in value to compare against
-		if "'" in condition[2]:
-			condition[2] = condition[2].replace("'", "")
+		# finds the index of the column used for comparison
+		if conditionGiven:
+			conditionColumnIndex = tableData.columns.get_loc(condition[0]) + 1
 
-	# checks if table exists
-	if (len(attributeNames) != 0):
-		if (cols[0] == '*'):
-			# creates 'header' for output
-			for i in range(0,len(attributeTypes)):
-				header.append(attributeNames[i] + ' ' + attributeTypes[i])
-			for i, row in enumerate(tableData.itertuples()):
-				for j in range(1, len(row)):
-					dataLine[i].append(str(row[j]))
-			
-		else:
-			dataIndicies = []
+			# removes any ' in value to compare against
+			if "'" in condition[2]:
+				condition[2] = condition[2].replace("'", "")
 
-			# creates a dataframe with the desired columns
-			subTable = tableData[cols]
-
-			# iterates over desired columns and attributeNames to get the proper index
-			for j, tableColumn in enumerate(attributeNames):
-				for i, givenCol in enumerate(cols):
-					if (givenCol == tableColumn): # if desired column in data
-						# creates header
-						header.append(attributeNames[j] + ' ' + attributeTypes[j])
-						# adds the index of the column to retreive data later
-						dataIndicies.append(i+1)
-
-			# iterates over each row in the DataFrame
-			for i, row in enumerate(subTable.itertuples()):
-				for j in dataIndicies:
-					if (conditionGiven):
-						# pulls data if it fits the given condition
-						conditionTrue = evalComparison(row[conditionColumnIndex], condition[1], condition[2])
-						if (conditionTrue):
-							dataLine[i].append(str(row[j]))
-					# appens row for output if there is no condition given
-					else:
+		# checks if table exists
+		if (len(attributeNames) != 0):
+			if (cols[0] == '*'):
+				# creates 'header' for output
+				for i in range(0,len(attributeTypes)):
+					header.append(attributeNames[i] + ' ' + attributeTypes[i])
+				for i, row in enumerate(tableData.itertuples()):
+					for j in range(1, len(row)):
 						dataLine[i].append(str(row[j]))
-			# iterrate over the rows and pull data from the proper column
+				
+			else:
+				dataIndicies = []
 
-		# filters out any empty rows
-		dataLine = list(filter(None, dataLine))
+				# creates a dataframe with the desired columns
+				subTable = tableData[cols]
 
-		# formats each output row
-		for value in dataLine:
-			mergedData = ' \t| '.join(value)
-			outputData.append(mergedData)
+				# iterates over desired columns and attributeNames to get the proper index
+				for j, tableColumn in enumerate(attributeNames):
+					for i, givenCol in enumerate(cols):
+						if (givenCol == tableColumn): # if desired column in data
+							# creates header
+							header.append(attributeNames[j] + ' ' + attributeTypes[j])
+							# adds the index of the column to retreive data later
+							dataIndicies.append(i+1)
 
-		# formats the header for output
-		mergedOutput = ' | '.join(header)
+				# iterates over each row in the DataFrame
+				for i, row in enumerate(subTable.itertuples()):
+					for j in dataIndicies:
+						if (conditionGiven):
+							# pulls data if it fits the given condition
+							conditionTrue = evalComparison(row[conditionColumnIndex], condition[1], condition[2])
+							if (conditionTrue):
+								dataLine[i].append(str(row[j]))
+						# appens row for output if there is no condition given
+						else:
+							dataLine[i].append(str(row[j]))
+				# iterrate over the rows and pull data from the proper column
 
-		# prints output
-		print (mergedOutput)
-		for x in outputData:
-			print(x)
+			# filters out any empty rows
+			dataLine = list(filter(None, dataLine))
 
+			# formats each output row
+			for value in dataLine:
+				mergedData = ' \t| '.join(value)
+				outputData.append(mergedData)
+
+			# formats the header for output
+			mergedOutput = ' | '.join(header)
+
+			# prints output
+			print (mergedOutput)
+			for x in outputData:
+				print(x)
+
+		else:
+			print ("!Failed to query table %s because it does not exist." % tableName)
+	elif (len(tableNames) == 4):
+
+		# reads in the two tables
+		tblData1, attrNames1, attrTypes1 = readTable(directory, tableNames[0])
+		tblData2, attrNames2, attrTypes2 = readTable(directory, tableNames[2])
+		tblAbb1 = tableNames[1]
+		tblAbb2 = tableNames[3]
+
+		# gets variable table name to compare later
+		condition1 = condition[0].split('.')
+		condition2 = condition[2].split('.')
+
+		# gets the two columns within the tables for comparison
+		tblCond1 = tblData1.loc[:,(condition1[1])]
+		tblCond2 = tblData2.loc[:,(condition2[1])]
+
+		# gets column names from given tables
+		combinedCols = attrNames1.values.tolist() + attrNames2.values.tolist()
+
+		# creates new DataFrame with the columns and datatypes from given tables
+		joinTable = pd.DataFrame(columns = combinedCols)
+		joinTable = joinTable.astype(tblData1.dtypes)
+		joinTable = joinTable.astype(tblData2.dtypes)
+
+
+
+		if (condition1[0] == tblAbb1 and condition2[0] == tblAbb2):
+			print ("looking at %s and %s" % (tableNames[0], tableNames[2]))
+			'''
+			for :
+				create combined entry
+				concat with joinTable
+			
+			'''
+		else:
+			print ("Table not found")
 	else:
-		print ("!Failed to query table %s because it does not exist." % tableName)
+		printError()
+
 
 def evalComparison(value1, operator, value2):
 	'''
@@ -526,12 +568,14 @@ def parser(inputCommand, direct):
 		elif (splitCommands[0] == 'SELECT'):
 			fromIndex = splitCommands.index('from')
 			condition = []
+			whereIndex = 0
 			if 'where' in splitCommands:
 				# creates a 'condition' list after 'where' keyword until the end
-				condition = splitCommands[splitCommands.index('where')+1: len(splitCommands)]
+				whereIndex = splitCommands.index('where')
+				condition = splitCommands[whereIndex+1: len(splitCommands)]
 			# creates a list of desired columns between 'SELECT' keyword and 'from'
 			columns = splitCommands[1:fromIndex]
-			query(direct, columns, splitCommands[fromIndex+1], condition)
+			query(direct, columns, splitCommands[fromIndex+1:whereIndex], condition)
 
 		# ALTER table data
 		elif (splitCommands[0] == 'ALTER'):
