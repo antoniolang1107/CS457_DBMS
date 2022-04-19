@@ -126,9 +126,10 @@ def query(directory, cols, tableNames, condition):
 	:param tableName: name of the desired table to read
 	:return: no value returned
 	"""
-	# print (cols)
-	# print (tableNames)
-	# print (condition)
+	print (cols)
+	print (tableNames)
+	print (condition)
+
 
 
 	tableData = pd.DataFrame()
@@ -255,35 +256,39 @@ def query(directory, cols, tableNames, condition):
 					j += 1
 				i += 1
 
-			dataLine = [[] for i in range(len(joinTable))]
-
-			for i in range(0, len(attrNames1)):
-				header.append(attrNames1[i] + ' ' + attrTypes1[i])
-			for i in range(0, len(attrNames2)):
-				header.append(attrNames1[i] + ' ' + attrTypes2[i])
-			
-			for i, row in enumerate(joinTable.itertuples()):
-				for j in range(1, len(row)):
-					dataLine[i].append(str(row[j]))
-
-			# formats each output row
-			for value in dataLine:
-				mergedData = ' \t| '.join(value)
-				outputData.append(mergedData)
-
-			# formats the header for output
-			mergedOutput = ' | '.join(header)
-
-			# prints output
-			print (mergedOutput)
-			for x in outputData:
-				print(x)
+			printTable(joinTable, joinTable.columns.values.tolist(), attrTypes1 + attrTypes2)
 
 		else:
 			
 			print ("Table not found")
 	else:
 		printError()
+
+
+def printTable(tableData, attributeNames, attributeTypes):
+	header = []
+	dataLine = [[] for i in range(len(tableData))]
+	outputData = []
+
+	for i in range(0, len(attributeNames)):
+		header.append(attributeNames[i] + ' ' + attributeTypes[i])
+	
+	for i, row in enumerate(tableData.itertuples()):
+		for j in range(1, len(row)):
+			dataLine[i].append(str(row[j]))
+
+	# formats each output row
+	for value in dataLine:
+		mergedData = ' \t| '.join(value)
+		outputData.append(mergedData)
+
+	# formats the header for output
+	mergedOutput = ' | '.join(header)
+
+	# prints output
+	print (mergedOutput)
+	for x in outputData:
+		print(x)
 
 
 def evalComparison(value1, operator, value2):
