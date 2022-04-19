@@ -231,16 +231,26 @@ def query(directory, cols, tableNames, condition):
 		joinTable = joinTable.astype(tblData1.dtypes)
 		joinTable = joinTable.astype(tblData2.dtypes)
 
-
+		tempDF = joinTable.copy()
 
 		if (condition1[0] == tblAbb1 and condition2[0] == tblAbb2):
 			print ("looking at %s and %s" % (tableNames[0], tableNames[2]))
-			'''
-			for :
-				create combined entry
-				concat with joinTable
-			
-			'''
+
+			i = 0
+			j = 0
+			for row1 in tblData1.itertuples():
+				j = 0
+				for row2 in tblData2.itertuples():
+					if (row1[1] == row2[1]):
+						tempDF.loc[0, tblData1.columns] = tblData1.iloc[i]
+						tempDF.loc[0, tblData2.columns] = tblData2.iloc[i]
+						tempDF = tempDF.astype(joinTable.dtypes)
+
+						joinTable = pd.concat([joinTable, tempDF], ignore_index = True)
+						
+					j += 1
+				i += 1
+			print (joinTable)
 		else:
 			print ("Table not found")
 	else:
