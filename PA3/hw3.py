@@ -1,10 +1,16 @@
+'''
+Author: Antonio Lang
+Class: CS 457 - Database Management System
+Project: Programming Assignment 3
+'''
+
+
 import os
 import shutil
 import errno
 import re
 import csv
-from turtle import right
-from numpy import NaN
+from numpy import int64
 import pandas as pd
 
 def createDB(directory, name):
@@ -257,7 +263,12 @@ def printTable(tableData, attributeNames, attributeTypes):
 	
 	for i, row in enumerate(tableData.itertuples()):
 		for j in range(1, len(row)):
-			dataLine[i].append(str(row[j]))
+
+			if (type(row[j]) == pd._libs.missing.NAType):
+				data = ' '
+			else:
+				data = str(row[j])
+			dataLine[i].append(data)
 
 	# formats each output row
 	for value in dataLine:
