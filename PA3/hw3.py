@@ -10,7 +10,6 @@ import shutil
 import errno
 import re
 import csv
-from numpy import int64
 import pandas as pd
 
 def createDB(directory, name):
@@ -145,6 +144,8 @@ def query(directory, cols, tableNames, condition):
 	if (len(tableNames) == 1):
 		tableName = tableNames[0].lower()
 		tableData, attributeNames, attributeTypes = readTable(directory, tableName)
+
+		# creates 2D array sized to the number of data to output
 		dataLine = [[] for i in range(len(tableData))]
 		header = []
 		conditionGiven = (len(condition) > 0)
@@ -254,6 +255,14 @@ def query(directory, cols, tableNames, condition):
 
 
 def printTable(tableData, attributeNames, attributeTypes):
+	'''
+	printTable prints a given DataFrame with formatting 
+	
+	:param tableData: DataFrame with table data
+	:param attributeNames: column names of the table
+	:param attributeTypes: names of original data types
+	:return: null
+	'''
 	header = []
 	dataLine = [[] for i in range(len(tableData))]
 	outputData = []
@@ -264,6 +273,7 @@ def printTable(tableData, attributeNames, attributeTypes):
 	for i, row in enumerate(tableData.itertuples()):
 		for j in range(1, len(row)):
 
+			# replaces output if <NA> exists in entry
 			if (type(row[j]) == pd._libs.missing.NAType):
 				data = ' '
 			else:
