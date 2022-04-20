@@ -4,6 +4,7 @@ import errno
 import re
 import csv
 from turtle import right
+from numpy import NaN
 import pandas as pd
 
 def createDB(directory, name):
@@ -127,9 +128,6 @@ def query(directory, cols, tableNames, condition):
 	:param tableName: name of the desired table to read
 	:return: no value returned
 	"""
-	print (cols)
-	print (tableNames)
-	print (condition)
 
 
 
@@ -209,7 +207,25 @@ def query(directory, cols, tableNames, condition):
 
 		else:
 			print ("!Failed to query table %s because it does not exist." % tableName)
-	elif (len(tableNames) == 4):
+	elif (len(tableNames) == 4 or 'join' in tableNames):
+
+		# finds join operation keywords in arguments
+		# default join operation set to inner
+		joinOperation = 'inner' 
+		if 'join' in tableNames:
+			tableNames.remove('join')
+			if 'outer' in tableNames:
+				tableNames.remove('outer')
+			if 'left' in tableNames:
+				tableNames.remove('left')
+				joinOperation = 'left'
+			elif 'right' in tableNames:
+				tableNames.remove('right')
+				joinOperation = 'right'
+			elif 'inner' in tableNames:
+				tableNames.remove('inner')
+				joinOperation = 'inner'
+
 		# reads in the two tables
 		leftTable, attrNames1, attrTypes1 = readTable(directory, tableNames[0])
 		rightTable, attrNames2, attrTypes2 = readTable(directory, tableNames[2])
@@ -222,10 +238,11 @@ def query(directory, cols, tableNames, condition):
 
 		# checks if variable name given for the table matches the comparison
 		if (condition1[0] == tblAbb1 and condition2[0] == tblAbb2):
-			joinTable = join(leftTable, rightTable, condition1[1], condition2[1], 'inner')
+			joinTable = join(leftTable, rightTable, condition1[1], condition2[1], joinOperation)
 			printTable(joinTable, joinTable.columns.values.tolist(), attrTypes1 + attrTypes2)
 		else:
 			print ("Table not found")
+
 	else:
 		printError()
 
@@ -546,9 +563,11 @@ def join(leftTable, rightTable, leftCondition, rightCondition, joinType):
 	i = 0
 	j = 0
 	for row1 in leftCond.iteritems():
+		dataAdded = False
 		j = 0
 		for row2 in rightCond.iteritems():
 			if (row1[1] == row2[1]):
+
 				# takes the data from the left and right tables and combines them
 				tempDF.loc[0, leftTable.columns] = leftTable.iloc[i]
 				tempDF.loc[0, rightTable.columns] = rightTable.iloc[j]
@@ -556,8 +575,34 @@ def join(leftTable, rightTable, leftCondition, rightCondition, joinType):
 
 				# adds the combined row into the joined table
 				joinTable = pd.concat([joinTable, tempDF], ignore_index = True)
-				
+				dataAdded = True
 			j += 1
+		if (joinType == 'left' and dataAdded == False):
+			# clears tempDF of any data
+			tempDF = tempDF[0:0]
+			tempDF.loc[0, leftTable.columns] = leftTable.iloc[i]
+
+			# changes any null values to pd.Int64Dtype and keeps others as original
+			for i in range(0, len(combinedCols)):
+				if (tempDF[combinedCols[i]].isnull().values.any()):
+					tempDF[combinedCols[i]] = tempDF[combinedCols[i]].astype(pd.Int64Dtype())
+				else:
+					tempDF[combinedCols[i]] = tempDF[combinedCols[i]].astype(joinTable[combinedCols[i]].dtypes)
+			# adds new entry to the joinTable
+			joinTable = pd.concat([joinTable, tempDF], ignore_index = True)
+		elif (joinType == 'right' and dataAdded == False):
+			# clears tempDF of any data
+			tempDF = tempDF[0:0]
+			tempDF.loc[0, rightTable.columns] = rightTable.iloc[j]
+
+			for i in range(0, len(combinedCols)):
+				if (tempDF[combinedCols[i]].isnull().values.any()):
+					tempDF[combinedCols[i]] = tempDF[combinedCols[i]].astype(pd.Int64Dtype())
+				else:
+					tempDF[combinedCols[i]] = tempDF[combinedCols[i]].astype(joinTable[combinedCols[i]].dtypes)
+
+			# adds new entry to the joinTable
+			joinTable = pd.concat([joinTable, tempDF], ignore_index = True)
 		i += 1
 	return joinTable
 
@@ -614,12 +659,15 @@ def parser(inputCommand, direct):
 				# creates a 'condition' list after 'where' keyword until the end
 				whereIndex = splitCommands.index('where')
 				condition = splitCommands[whereIndex+1: len(splitCommands)]
+			elif 'on' and 'join' in splitCommands:
+				# creates 'condition' list after index of 'on'
+				whereIndex = splitCommands.index('on')
+				condition = splitCommands[whereIndex+1: len(splitCommands)]
 			else:
 				# sets whereIndex to cover the given table if 'simple' query
 				whereIndex = fromIndex + 2
 			# creates a list of desired columns between 'SELECT' keyword and 'from'
 			columns = splitCommands[1:fromIndex]
-			print (splitCommands[fromIndex+1:whereIndex])
 			query(direct, columns, splitCommands[fromIndex+1:whereIndex], condition)
 
 		# ALTER table data
