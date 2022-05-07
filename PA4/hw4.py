@@ -635,6 +635,16 @@ def lockTable(database, table):
 	:param database: currently active database
 	:param table: desired table to lock
 	'''
+
+	'''
+	if table is locked
+		error
+	else
+		lock table
+	
+	
+	'''
+
 	print("locks table")
 
 
@@ -645,6 +655,12 @@ def commitChanges(database, table):
 	:param database: currently active database
 	:param table: desired table to commit changes
 	'''
+
+	'''
+	save lockedTable table data into the original file
+	unlockTable()
+	'''
+
 	print("commits changes")
 
 def abortTransaction(database, table):
@@ -653,6 +669,11 @@ def abortTransaction(database, table):
 
 	:param database: currently active database
 	:param table: desired table to discard transactions
+	'''
+
+	'''
+	deleted locked table
+	
 	'''
 	print("transaction aborted")
 
@@ -664,7 +685,26 @@ def unlockTable(database, table):
 	:param database: currently active database
 	:param table: desired table to unlock
 	'''
+
+	'''
+	delete locked table
+	
+	'''
 	print("unlocks table")
+
+
+def isTable(database, tableName):
+	return (isFile(database, tableName + '.json'))
+
+def isLocked(database, tableName):
+	return (isFile(database, tableName + 'Lock.json'))
+
+def isFile(database, fileName):
+	dataPath = os.path.join(database, fileName)
+	return (os.path.isfile(dataPath))
+
+def dbInUse(database):
+	return not database == os.getcwd()
 
 def parser(inputCommand, direct):
 	"""
