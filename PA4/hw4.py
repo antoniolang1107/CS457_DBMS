@@ -12,6 +12,14 @@ import re
 import csv
 import pandas as pd
 
+
+class TableLock:
+	def __init__ (self, tableName, hasLock):
+		self.tableName = tableName
+		self.hasLock = hasLock
+	def checkLock(self, compareTable):
+		return (self.tableName == compareTable) and self.hasLock
+
 def createDB(directory, name):
 	"""
 	createDB creates a database in the root folder if available
@@ -630,22 +638,33 @@ def join(leftTable, rightTable, leftCondition, rightCondition, joinType):
 
 def lockTable(database, table):
 	'''
-	lockTable locks a table and does not allow any new transactions from other users
+	lockTable creates a 'lock file'
 
 	:param database: currently active database
 	:param table: desired table to lock
 	'''
 
-	'''
-	if table is locked
-		error
-	else
-		lock table
-	
-	
-	'''
+	if isTable(database, table):
+		if isLocked(database, table):
+			print("Error: Table %s is locked!" % table)
+			lockStatus = TableLock(table, False)
+		else:
+			createLockedTable(database, table)
+			lockStatus = TableLock(table, True)
+	else:
+		print("!Error table not found.")
+		lockStatus = TableLock(table, False)
 
-	print("locks table")
+	return lockStatus
+	
+
+def createLockedTable(database, table):
+	lockTable = table + 'Locked.json'
+	lockTablePath = os.path.join(database, lockTable)
+	tableName = table + '.json'
+	tablePath = os.path.join(database, tableName)
+
+	shutil.copy(tablePath, lockTablePath)
 
 
 def commitChanges(database, table):
@@ -697,7 +716,7 @@ def isTable(database, tableName):
 	return (isFile(database, tableName + '.json'))
 
 def isLocked(database, tableName):
-	return (isFile(database, tableName + 'Lock.json'))
+	return (isFile(database, tableName + 'Locked.json'))
 
 def isFile(database, fileName):
 	dataPath = os.path.join(database, fileName)
@@ -791,6 +810,12 @@ def parser(inputCommand, direct):
 		# DELETE entries based on given condition
 		elif (splitCommands[0] == 'DELETE' and splitCommands[1].upper() == 'FROM'):
 				delete(direct, splitCommands)
+
+		elif (splitCommands[0] == 'TEST'):
+			# print(isLocked('db1', 'Flights'))
+			# tempLock = lockTable('db1', 'Flights')
+			# print(tempLock.checkLock('test'))
+			lockTable('db1', 'flights')
 
 		else:
 			printError()
