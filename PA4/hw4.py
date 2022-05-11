@@ -14,9 +14,11 @@ import pandas as pd
 
 
 class TableLock:
-	def __init__ (self, tableName, hasLock):
+	def __init__ (self, database, tableName, hasLock, modified):
+		self.database = database
 		self.tableName = tableName
 		self.hasLock = hasLock
+		self.modifed = False
 	def checkLock(self, compareTable):
 		return (self.tableName == compareTable) and self.hasLock
 
@@ -636,6 +638,10 @@ def join(leftTable, rightTable, leftCondition, rightCondition, joinType):
 	return joinTable
 
 
+def startTransaction():
+	print("Transaction starts.")
+
+
 def lockTable(database, table):
 	'''
 	lockTable creates a 'lock file'
@@ -647,54 +653,48 @@ def lockTable(database, table):
 	if isTable(database, table):
 		if isLocked(database, table):
 			print("Error: Table %s is locked!" % table)
-			lockStatus = TableLock(table, False)
+			lockStatus = TableLock(database, table, False, False)
 		else:
 			createLockedTable(database, table)
-			lockStatus = TableLock(table, True)
+			lockStatus = TableLock(database, table, True, False)
 	else:
 		print("!Error table not found.")
-		lockStatus = TableLock(table, False)
+		lockStatus = TableLock(database, table, False, False)
 
 	return lockStatus
 	
 
 def createLockedTable(database, table):
 	lockTable = table + 'Locked.json'
-	lockTablePath = os.path.join(database, lockTable)
 	tableName = table + '.json'
-	tablePath = os.path.join(database, tableName)
 
-	shutil.copy(tablePath, lockTablePath)
+	copyFile(database, tableName, lockTable)
 
 
-def commitChanges(database, table):
+def copyFile(database, source, dest):
+	sourcePath = os.path.join(database, source)
+	destPath = os.path.join(database, dest)
+	shutil.copy(sourcePath, destPath)
+
+def commitChanges(locks):
 	'''
 	commitChanges commits transcations to the table
 	
 	:param database: currently active database
 	:param table: desired table to commit changes
 	'''
-
-	'''
-	save lockedTable table data into the original file
-	unlockTable()
-	'''
-
-	print("commits changes")
-
-def abortTransaction(database, table):
-	'''
-	discards any changes in the locked table and unlocks it
-
-	:param database: currently active database
-	:param table: desired table to discard transactions
-	'''
-
-	'''
-	deleted locked table
 	
-	'''
-	print("transaction aborted")
+	changeMade = False
+
+	for lock in locks:
+		if lock.hasLock is True:
+			unlockTable(lock.database, lock.tableName)
+			if lock.modified is True:
+				changeMade = True
+	if changeMade is False:
+		print("Transaction abort.")
+	else:
+		print("Transaction committed.")
 
 
 def unlockTable(database, table):
@@ -705,11 +705,16 @@ def unlockTable(database, table):
 	:param table: desired table to unlock
 	'''
 
-	'''
-	delete locked table
-	
-	'''
-	print("unlocks table")
+	tableName = table + '.json'
+	lockTable = table + 'Locked.json'
+	copyFile(database, lockTable, tableName)
+	deleteFile(database, table, 'Locked.json')
+
+def deleteFile(database, fName, fExtension):
+	file = fName + fExtension
+	filePath = os.path.join(database, file)
+
+	os.remove(filePath)
 
 
 def isTable(database, tableName):
@@ -816,6 +821,8 @@ def parser(inputCommand, direct):
 			# tempLock = lockTable('db1', 'Flights')
 			# print(tempLock.checkLock('test'))
 			lockTable('db1', 'flights')
+		elif (splitCommands[0] == 'TEST1'):
+			unlockTable('db1', 'flights')
 
 		else:
 			printError()
