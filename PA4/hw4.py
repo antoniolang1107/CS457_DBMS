@@ -11,14 +11,15 @@ import errno
 import re
 import csv
 import pandas as pd
-
+locks = []
+transactionStatus = False
 
 class TableLock:
 	def __init__ (self, database, tableName, hasLock, modified):
 		self.database = database
 		self.tableName = tableName
 		self.hasLock = hasLock
-		self.modifed = False
+		self.modified = modified
 	def checkLock(self, compareTable):
 		return (self.tableName == compareTable) and self.hasLock
 
@@ -639,7 +640,10 @@ def join(leftTable, rightTable, leftCondition, rightCondition, joinType):
 
 
 def startTransaction():
-	print("Transaction starts.")
+	if transactionStatus is False:
+		print("Transaction starts.")
+	else:
+		print("Transaction already started.")
 
 
 def lockTable(database, table):
@@ -649,18 +653,13 @@ def lockTable(database, table):
 	:param database: currently active database
 	:param table: desired table to lock
 	'''
-
-	if isTable(database, table):
-		if isLocked(database, table):
-			print("Error: Table %s is locked!" % table)
-			lockStatus = TableLock(database, table, False, False)
-		else:
-			createLockedTable(database, table)
-			lockStatus = TableLock(database, table, True, False)
-	else:
-		print("!Error table not found.")
+	if isLocked(database, table):
+		print("Error: Table %s is locked!" % table)
 		lockStatus = TableLock(database, table, False, False)
-
+	else:
+		createLockedTable(database, table)
+		lockStatus = TableLock(database, table, True, False)
+	
 	return lockStatus
 	
 
@@ -676,25 +675,27 @@ def copyFile(database, source, dest):
 	destPath = os.path.join(database, dest)
 	shutil.copy(sourcePath, destPath)
 
-def commitChanges(locks):
+def commitTransaction(locks):
 	'''
-	commitChanges commits transcations to the table
+	commitTransaction commits transcations to the table
 	
 	:param database: currently active database
 	:param table: desired table to commit changes
 	'''
-	
-	changeMade = False
+	if transactionStatus is True:
+		changeMade = False
 
-	for lock in locks:
-		if lock.hasLock is True:
-			unlockTable(lock.database, lock.tableName)
-			if lock.modified is True:
-				changeMade = True
-	if changeMade is False:
-		print("Transaction abort.")
+		for lock in locks:
+			if lock.hasLock is True:
+				unlockTable(lock.database, lock.tableName)
+				if lock.modified is True:
+					changeMade = True
+		if changeMade is False:
+			print("Transaction abort.")
+		else:
+			print("Transaction committed.")
 	else:
-		print("Transaction committed.")
+		print("No transaction started.")
 
 
 def unlockTable(database, table):
@@ -739,6 +740,7 @@ def parser(inputCommand, direct):
 	:return: returns the original directory if unchanged
 	:return: returns False if "EXIT" is parsed from the inputCommand
 	"""
+
 
 	# parses the user input into tokens and groups anything within parenthesis as one token
 	splitCommands = list(filter(None, re.split(', |\s|;+|\((.+)\)', inputCommand)))
@@ -815,12 +817,20 @@ def parser(inputCommand, direct):
 		# DELETE entries based on given condition
 		elif (splitCommands[0] == 'DELETE' and splitCommands[1].upper() == 'FROM'):
 				delete(direct, splitCommands)
+		elif (splitCommands[0] == 'BEGIN' and len(splitCommands) > 1):
+			if (splitCommands[1].upper() == 'TRANSACTION'):
+				startTransaction()
+			else:
+				printError()
+		elif (splitCommands[0] == 'COMMIT'):
+			commitTransaction(locks)
 
 		elif (splitCommands[0] == 'TEST'):
 			# print(isLocked('db1', 'Flights'))
-			# tempLock = lockTable('db1', 'Flights')
+			tempLock = lockTable('db1', 'Flights')
+			locks.append(tempLock)
+			print(len(locks))
 			# print(tempLock.checkLock('test'))
-			lockTable('db1', 'flights')
 		elif (splitCommands[0] == 'TEST1'):
 			unlockTable('db1', 'flights')
 
