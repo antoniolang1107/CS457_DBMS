@@ -2,6 +2,7 @@
 Author: Antonio Lang
 Class: CS 457 - Database Management System
 Project: Programming Assignment 4
+Includes transaction functionality
 '''
 
 
@@ -430,6 +431,8 @@ def readTable(directory, tableName):
 	:param tableName: name of the table to read
 	:return: DataFrame with data, attributeNames with the column names, attributeTypes with original variable names
 	"""
+	if transactionStatus is True:
+		tableName += 'Locked'
 	dataFileName = tableName + '.json'
 	attributeFileName = tableName + 'Attributes.csv'
 	tableData = pd.DataFrame()
@@ -465,6 +468,8 @@ def writeTable(directory, tableName, table, attributeTypes):
 	:param attributeTypes: original names of given columns
 	return: no value returned
 	'''
+	if transactionStatus is True:
+		tableName += 'Locked'
 	tableFileName = tableName + '.json'
 	tablePath = os.path.join(directory, tableFileName)
 
@@ -480,36 +485,41 @@ def update(directory, tableName, updateCol, updateVal, compareOperator, conditio
 	:return: no value returned
 	'''
 
-	tableData, attributeNames, attributeTypes = readTable(directory, tableName)
-	numUpdated = 0
+	locks.append(lockTable(directory, tableName))
+	if checkLocks(tableName):
 
-	# changes a numeric string argument into int
-	if (updateVal.isnumeric()):
-		updateVal = int(updateVal)
+		tableData, attributeNames, attributeTypes = readTable(directory, tableName)
+		numUpdated = 0
 
-	# if the table exists, then check values to update
-	if (len(attributeNames) > 0):
-		conditionColData = tableData.loc[:,(conditionCol)]
+		# changes a numeric string argument into int
+		if (updateVal.isnumeric()):
+			updateVal = int(updateVal)
 
-		# iterates over the conditional column and updates desired column
-		for i, value in enumerate(conditionColData):
-			condition = evalComparison(value, compareOperator, conditionVal)
+		# if the table exists, then check values to update
+		if (len(attributeNames) > 0):
+			conditionColData = tableData.loc[:,(conditionCol)]
 
-			if condition:
-				tableData.at[i, updateCol] = updateVal
-				numUpdated += 1
+			# iterates over the conditional column and updates desired column
+			for i, value in enumerate(conditionColData):
+				condition = evalComparison(value, compareOperator, conditionVal)
 
-		# writes updated data to disc
-		writeTable(directory, tableName, tableData, attributeTypes)
+				if condition:
+					tableData.at[i, updateCol] = updateVal
+					numUpdated += 1
 
-		if (numUpdated == 1):
-			print ("%d record modified." % numUpdated)
+			# writes updated data to disc
+			writeTable(directory, tableName, tableData, attributeTypes)
+
+			if (numUpdated == 1):
+				print ("%d record modified." % numUpdated)
+			else:
+				print ("%d records modified." % numUpdated)
+			if (numUpdated > 0):
+				locks[len(locks)-1].modified = True
+
+		# table does not exist -> display error
 		else:
-			print ("%d records modified." % numUpdated)
-
-	# table does not exist -> display error
-	else:
-		print ("!Error table %s doesn't exist." % tableName)
+			print ("!Error table %s doesn't exist." % tableName)
 
 
 def delete(directory, commands):
@@ -640,8 +650,10 @@ def join(leftTable, rightTable, leftCondition, rightCondition, joinType):
 
 
 def startTransaction():
+	global transactionStatus
 	if transactionStatus is False:
 		print("Transaction starts.")
+		transactionStatus = True
 	else:
 		print("Transaction already started.")
 
@@ -665,9 +677,12 @@ def lockTable(database, table):
 
 def createLockedTable(database, table):
 	lockTable = table + 'Locked.json'
+	lockAttributes = table + 'LockedAttributes.csv'
 	tableName = table + '.json'
+	attributesFile = table + 'Attributes.csv'
 
 	copyFile(database, tableName, lockTable)
+	copyFile(database, attributesFile, lockAttributes)
 
 
 def copyFile(database, source, dest):
@@ -682,7 +697,9 @@ def commitTransaction(locks):
 	:param database: currently active database
 	:param table: desired table to commit changes
 	'''
+	global transactionStatus
 	if transactionStatus is True:
+		transactionStatus = False
 		changeMade = False
 
 		for lock in locks:
@@ -707,15 +724,25 @@ def unlockTable(database, table):
 	'''
 
 	tableName = table + '.json'
+	attributesFile = table + 'Attributes.csv'
 	lockTable = table + 'Locked.json'
+	lockAttributes = table + 'LockedAttributes.csv'
 	copyFile(database, lockTable, tableName)
+	copyFile(database, lockAttributes, attributesFile)
 	deleteFile(database, table, 'Locked.json')
+	deleteFile(database, table, 'LockedAttributes.csv')
 
 def deleteFile(database, fName, fExtension):
 	file = fName + fExtension
 	filePath = os.path.join(database, file)
 
 	os.remove(filePath)
+
+def checkLocks(table):
+	for lock in locks:
+		if lock.tableName and lock.hasLock is True:
+			return True
+	return False
 
 
 def isTable(database, tableName):
@@ -827,9 +854,8 @@ def parser(inputCommand, direct):
 
 		elif (splitCommands[0] == 'TEST'):
 			# print(isLocked('db1', 'Flights'))
-			tempLock = lockTable('db1', 'Flights')
+			tempLock = lockTable('db1', 'flights')
 			locks.append(tempLock)
-			print(len(locks))
 			# print(tempLock.checkLock('test'))
 		elif (splitCommands[0] == 'TEST1'):
 			unlockTable('db1', 'flights')
